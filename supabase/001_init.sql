@@ -1,0 +1,13 @@
+create extension if not exists pgcrypto;
+create table public.agencies(id uuid primary key default gen_random_uuid(),name text not null,created_at timestamptz not null default now());
+create table public.agency_members(agency_id uuid not null references public.agencies(id) on delete cascade,user_id uuid not null references auth.users(id) on delete cascade,role text not null default 'agent' check(role in ('owner','agent')),primary key(agency_id,user_id));
+create table public.leads(id uuid primary key default gen_random_uuid(),agency_id uuid not null references public.agencies(id) on delete cascade,name text not null,email text not null,phone text,budget numeric not null check(budget>0),location text not null,timeline text not null check(timeline in ('immediate','1-3 months','3-6 months','exploring')),consent boolean not null check(consent),score integer not null check(score between 0 and 100),category text not null check(category in ('hot','warm','cold')),next_action text not null,source text not null default 'manual',created_at timestamptz not null default now());
+create index leads_agency_created_idx on public.leads(agency_id,created_at desc);
+create index agency_members_user_idx on public.agency_members(user_id);
+alter table public.agencies enable row level security;
+alter table public.agency_members enable row level security;
+alter table public.leads enable row level security;
+create policy "members view agency" on public.agencies for select to authenticated using(exists(select 1 from public.agency_members m where m.agency_id=id and m.user_id=(select auth.uid())));
+create policy "members view own membership" on public.agency_members for select to authenticated using(user_id=(select auth.uid()));
+create policy "members view leads" on public.leads for select to authenticated using(exists(select 1 from public.agency_members m where m.agency_id=leads.agency_id and m.user_id=(select auth.uid())));
+create policy "members add leads" on public.leads for insert to authenticated with check(exists(select 1 from public.agency_members m where m.agency_id=leads.agency_id and m.user_id=(select auth.uid())));
