@@ -1,0 +1,5 @@
+'use client';
+import {useState} from 'react';import {createBrowserClient} from '@supabase/ssr';
+export default function Login(){const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[message,setMessage]=useState('');const[busy,setBusy]=useState(false);
+async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);const db=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);const {error}=await db.auth.signInWithPassword({email,password});setBusy(false);if(error)setMessage(error.message);else window.location.href='/dashboard'}
+return <main className="wrap narrow"><h1>Agency sign in</h1><p>Accounts are provisioned by the agency administrator.</p><form onSubmit={submit}><label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy}>{busy?'Signing in…':'Sign in'}</button></form><p role="status">{message}</p></main>}
